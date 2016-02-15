@@ -1,10 +1,10 @@
-package com.nicholastmosher.easycom.data.connection;
+package com.nicholastmosher.easycom.core.connection;
 
 import android.content.ContentValues;
 import android.provider.BaseColumns;
 
 import com.nicholastmosher.easycom.R;
-import com.nicholastmosher.easycom.data.connection.intents.ConnectionIntent;
+import com.nicholastmosher.easycom.core.connection.intents.ConnectionIntent;
 
 import java.io.IOException;
 import java.io.InputStream;

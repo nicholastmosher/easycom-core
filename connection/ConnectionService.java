@@ -1,4 +1,4 @@
-package com.nicholastmosher.easycom.data.connection;
+package com.nicholastmosher.easycom.core.connection;
 
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
@@ -19,8 +19,8 @@ import android.os.IBinder;
 import android.support.v4.content.LocalBroadcastManager;
 
 import com.nicholastmosher.easycom.ActivityMain;
-import com.nicholastmosher.easycom.data.connection.intents.ConnectionIntent;
-import com.nicholastmosher.easycom.data.connection.intents.DataReceiveIntent;
+import com.nicholastmosher.easycom.core.connection.intents.ConnectionIntent;
+import com.nicholastmosher.easycom.core.connection.intents.DataReceiveIntent;
 
 import java.io.BufferedReader;
 import java.io.IOException;

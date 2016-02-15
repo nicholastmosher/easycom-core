@@ -1,11 +1,11 @@
-package com.nicholastmosher.easycom.data.connection.intents;
+package com.nicholastmosher.easycom.core.connection.intents;
 
 import android.content.Context;
 import android.content.Intent;
 import android.support.v4.content.LocalBroadcastManager;
 
-import com.nicholastmosher.easycom.data.connection.Connection;
-import com.nicholastmosher.easycom.data.connection.ConnectionService;
+import com.nicholastmosher.easycom.core.connection.Connection;
+import com.nicholastmosher.easycom.core.connection.ConnectionService;
 
 import java.util.UUID;
 

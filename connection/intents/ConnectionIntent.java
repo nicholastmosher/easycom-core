@@ -1,4 +1,4 @@
-package com.nicholastmosher.easycom.data.connection.intents;
+package com.nicholastmosher.easycom.core.connection.intents;
 
 /**
  * Created by Nick Mosher on 4/17/15.

@@ -1,4 +1,4 @@
-package com.nicholastmosher.easycom.data.connection;
+package com.nicholastmosher.easycom.core.connection;
 
 import java.util.ArrayList;
 import java.util.Iterator;

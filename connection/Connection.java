@@ -1,4 +1,4 @@
-package com.nicholastmosher.easycom.data.connection;
+package com.nicholastmosher.easycom.core.connection;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -7,9 +7,9 @@ import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 
-import com.nicholastmosher.easycom.data.connection.intents.ConnectIntent;
-import com.nicholastmosher.easycom.data.connection.intents.DataSendIntent;
-import com.nicholastmosher.easycom.data.connection.intents.DisconnectIntent;
+import com.nicholastmosher.easycom.core.connection.intents.ConnectIntent;
+import com.nicholastmosher.easycom.core.connection.intents.DataSendIntent;
+import com.nicholastmosher.easycom.core.connection.intents.DisconnectIntent;
 
 import java.io.IOException;
 import java.io.InputStream;
