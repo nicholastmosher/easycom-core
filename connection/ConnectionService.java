@@ -18,7 +18,7 @@ import android.os.HandlerThread;
 import android.os.IBinder;
 import android.support.v4.content.LocalBroadcastManager;
 
-import com.nicholastmosher.easycom.ActivityMain;
+import com.nicholastmosher.easycom.MainActivity;
 import com.nicholastmosher.easycom.core.connection.intents.ConnectionIntent;
 import com.nicholastmosher.easycom.core.connection.intents.DataReceiveIntent;
 
@@ -851,7 +851,8 @@ public class ConnectionService extends Service {
                 //Ensure that we're not just sending blank strings; can happen if connection ends.
                 if(line != null && !line.equals("")) {
                     System.out.println(line);
-                    new DataReceiveIntent(mContext, ActivityMain.class, mConnection, line.getBytes()).sendLocal();
+                    //FIXME Instead of hardcoding MainActivity.class, add class "listeners"
+                    new DataReceiveIntent(mContext, MainActivity.class, mConnection, line.getBytes()).sendLocal();
                 }
 
                 try {
