@@ -16,11 +16,9 @@ import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
-import android.support.v4.content.LocalBroadcastManager;
+import android.util.Log;
 
-import com.nicholastmosher.easycom.ActivityMain;
-import com.nicholastmosher.easycom.core.connection.intents.ConnectionIntent;
-import com.nicholastmosher.easycom.core.connection.intents.DataReceiveIntent;
+import com.nicholastmosher.easycom.MainActivity;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -53,142 +51,52 @@ public class ConnectionService extends Service {
      * interrupt the ConnectTask before it can be active.  If the active Task finishes,
      * it removes itself from this Map.
      */
-    private static final Map<Connection, AsyncTask<Connection, Void, Boolean>> TASKS = new HashMap<>();
+    private final Map<Connection, AsyncTask<Connection, Void, Boolean>> mTasks = new HashMap<>();
+
+    private static final String TAG = "ConnectionService";
 
     private static boolean launched = false;
 
-    private static Context mContext;
+    /**
+     * Instantiated on the first onCreate of this service. Entities
+     * can then reference the created instance by calling getInstance();
+     */
+    private static ConnectionService SINGLETON;
 
     private UsbManager mUsbManager;
+
+    /**
+     * Launches the ConnectionService if it is not already active.
+     * @param context The context to launch the Service from.
+     */
+    public static void launch(Context context) {
+        if(!launched) {
+            if(context == null) {
+                Log.w(TAG, "Context is null.");
+                return;
+            }
+            context.startService(new Intent(context, ConnectionService.class));
+        }
+    }
+
+    /**
+     * @return The active instance of this service.
+     */
+    public static ConnectionService getInstance() {
+        return SINGLETON;
+    }
 
     public IBinder onBind(Intent intent) {
         return null;
     }
 
     public void onCreate() {
+        SINGLETON = this;
         launched = true;
         mUsbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
     }
 
     public int onStartCommand(Intent intent, int flags, int startId) {
-
-        //Listen for broadcasts regarding connect and disconnect.
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(ConnectionIntent.ACTION_CONNECT);
-        filter.addAction(ConnectionIntent.ACTION_DISCONNECT);
-        LocalBroadcastManager.getInstance(this).registerReceiver(new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-
-                //Null safety check on the intent.
-                if(intent == null) {
-                    new NullPointerException("Intent is null!").printStackTrace();
-                    return;
-                }
-
-                //Retrieve a connection from the static map in Connection using the UUID key from the intent.
-                Connection connection = Connection.getConnection(intent.getStringExtra(ConnectionIntent.CONNECTION_UUID));
-
-                //Safety to make sure we don't get null pointer exceptions.
-                if(connection == null) {
-                    new NullPointerException("Connection is null!").printStackTrace();
-                    return;
-                }
-
-                //Launch different handlers based on the type of connection.
-                switch(connection.getConnectionType()) {
-                    //If it's a BluetoothConnection.
-                    case ConnectionIntent.CONNECTION_TYPE_BLUETOOTH: {
-                        //Launch different handlers based on the action specified.
-                        switch(intent.getAction()) {
-                            //If it's a connect action.
-                            case ConnectionIntent.ACTION_CONNECT: {
-                                setTask(connection, new ConnectBluetoothTask());
-                            }
-                            break;
-                            //If it's a disconnect action.
-                            case ConnectionIntent.ACTION_DISCONNECT: {
-                                setTask(connection, new DisconnectBluetoothTask());
-                            }
-                            break;
-                            default:
-                        }
-                    }
-                    break;
-                    //If it's a TcpIpConnection.
-                    case ConnectionIntent.CONNECTION_TYPE_TCPIP: {
-                        //Launch different handlers based on the action specified.
-                        switch(intent.getAction()) {
-                            //If it's a connect action.
-                            case ConnectionIntent.ACTION_CONNECT: {
-                                setTask(connection, new ConnectTcpIpTask());
-                            }
-                            break;
-                            //If it's a disconnect action.
-                            case ConnectionIntent.ACTION_DISCONNECT: {
-                                setTask(connection, new DisconnectTcpIpTask());
-                            }
-                            break;
-                            default:
-                        }
-                    }
-                    break;
-                    //If it's a UsbHostConnection
-                    case ConnectionIntent.CONNECTION_TYPE_USB: {
-                        //Launch different handlers based on the action specified.
-                        switch(intent.getAction()) {
-                            //If it's a connect action.
-                            case ConnectionIntent.ACTION_CONNECT: {
-                                setTask(connection, new ConnectUsbTask());
-                            }
-                            break;
-                            //If it's a disconnect action.
-                            case ConnectionIntent.ACTION_DISCONNECT: {
-                                setTask(connection, new DisconnectUsbTask());
-                            }
-                            break;
-                            default:
-                        }
-                    }
-                    break;
-                    default:
-                }
-            }
-        }, filter);
-
-        //This receiver listens for requests to send data over some Connection.
-        LocalBroadcastManager.getInstance(this).registerReceiver(new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-
-                //Check if intent is null.
-                if(intent == null) {
-                    new NullPointerException("Intent is null!").printStackTrace();
-                    return;
-                }
-
-                //Retrieve connection via static map and UUID keys.
-                Connection connection = Connection.getConnection(intent.getStringExtra(ConnectionIntent.CONNECTION_UUID));
-
-                //Check if connection is null.
-                if(connection == null) {
-                    new NullPointerException("Connection is null!").printStackTrace();
-                    return;
-                }
-
-                //Retrieve data from intent extra.
-                byte[] data = intent.getByteArrayExtra(ConnectionIntent.SEND_DATA);
-
-                //Check if data is null.
-                if(data == null) {
-                    new NullPointerException("Data is null!").printStackTrace();
-                    return;
-                }
-
-                //Send data using the registered TransferManager for the connection.
-                TransferManager.getManager(connection).postSendTask(new SendTask(connection, data));
-            }
-        }, new IntentFilter(ConnectionIntent.ACTION_SEND_DATA));
 
         /*
          * This receiver listens for an Android system broadcast
@@ -230,17 +138,82 @@ public class ConnectionService extends Service {
     }
 
     /**
-     * Launches the ConnectionService if it is not already active.
-     * @param context The context to launch the Service from.
+     * Queues the given connection to be connected.
+     * @param connection The connection to connect.
      */
-    public static void launch(Context context) {
-        if(!launched) {
-            if(context == null) {
-                new NullPointerException("Context is null!").printStackTrace();
-                return;
-            }
-            mContext = context;
-            context.startService(new Intent(mContext, ConnectionService.class));
+    public void connect(Connection connection) {
+
+        if(connection == null) {
+            Log.w(TAG, "Connection is null.");
+            return;
+        }
+
+        switch(connection.getConnectionType()) {
+            case Connection.TYPE_BLUETOOTH:
+                setTask(connection, new ConnectBluetoothTask());
+                break;
+            case Connection.TYPE_TCPIP:
+                setTask(connection, new ConnectTcpIpTask());
+                break;
+            case Connection.TYPE_USB:
+                Log.i(TAG, "Usb not implemented yet.");
+                break;
+            default:
+                Log.w(TAG, "Connection " + connection.toString() + " is not a valid type.");
+        }
+    }
+
+    /**
+     * Queues the given connection to be disconnected.
+     * @param connection The connection to be disconnected.
+     */
+    public void disconnect(Connection connection) {
+
+        if(connection == null) {
+            Log.w(TAG, "Connection is null.");
+            return;
+        }
+
+        switch(connection.getConnectionType()) {
+            case Connection.TYPE_BLUETOOTH:
+                setTask(connection, new DisconnectBluetoothTask());
+                break;
+            case Connection.TYPE_TCPIP:
+                setTask(connection, new DisconnectTcpIpTask());
+                break;
+            case Connection.TYPE_USB:
+                Log.i(TAG, "Usb not implemented yet.");
+                break;
+            default:
+                Log.w(TAG, "Connection " + connection.toString() + " is not a valid type.");
+        }
+    }
+
+    /**
+     * Queues data to be sent over the given connection. The queues are
+     * asynchronous but guaranteed to be ordered.
+     * @param connection The connection to send data over.
+     * @param data The data to send.
+     */
+    public void send(Connection connection, byte[] data) {
+
+        if(connection == null) {
+            Log.w(TAG, "Connection is null.");
+            return;
+        }
+
+        switch(connection.getConnectionType()) {
+            case Connection.TYPE_BLUETOOTH:
+                TransferManager.getManager(connection).postSendTask(new SendTask(connection, data));
+                break;
+            case Connection.TYPE_TCPIP:
+                TransferManager.getManager(connection).postSendTask(new SendTask(connection, data));
+                break;
+            case Connection.TYPE_USB:
+
+                break;
+            default:
+                Log.w(TAG, "Connection " + connection.toString() + " is not a valid type.");
         }
     }
 
@@ -250,33 +223,35 @@ public class ConnectionService extends Service {
      * @param connection The connection to set this task for.
      * @param task       The task to assign to the connection.
      */
-    private static void setTask(Connection connection, AsyncTask<Connection, Void, Boolean> task) {
+    private void setTask(Connection connection, AsyncTask<Connection, Void, Boolean> task) {
 
         //Null safety check connection and task.
         if(connection == null) {
-            new NullPointerException("Connection is null!").printStackTrace();
+            Log.w(TAG, "Connection is null.");
             return;
         }
         if(task == null) {
-            new NullPointerException("Task is null!").printStackTrace();
+            Log.w(TAG, "Task is null.");
             return;
         }
 
-        //If the connection already has a task running, cancel it and remove it.
-        if(TASKS.containsKey(connection)) {
-            AsyncTask<Connection, Void, Boolean> asyncTask = TASKS.get(connection);
-            //Null safety check the existing task.
-            if(asyncTask != null) {
-                asyncTask.cancel(true);
+        synchronized(mTasks) {
+            //If the connection already has a task running, cancel it and remove it.
+            if (mTasks.containsKey(connection)) {
+                AsyncTask<Connection, Void, Boolean> asyncTask = mTasks.get(connection);
+                //Null safety check the existing task.
+                if (asyncTask != null) {
+                    asyncTask.cancel(true);
+                }
+
+                //Remove the connection/task entry from the map.
+                mTasks.remove(connection);
             }
 
-            //Remove the connection/task entry from the map.
-            TASKS.remove(connection);
+            //Add and launch the new task for the connection.
+            mTasks.put(connection, task);
+            task.execute(connection);
         }
-
-        //Add and launch the new task for the connection.
-        TASKS.put(connection, task);
-        task.execute(connection);
     }
 
     /**
@@ -284,13 +259,12 @@ public class ConnectionService extends Service {
      * to handle opening BluetoothConnections.
      * Usage: new ConnectBluetoothTask(myBluetoothConnection).execute();
      */
-    private static class ConnectBluetoothTask extends AsyncTask<Connection, Void, Boolean> {
+    private class ConnectBluetoothTask extends AsyncTask<Connection, Void, Boolean> {
 
         private BluetoothConnection mConnection;
         private BluetoothAdapter mBluetoothAdapter;
         private BluetoothSocket mBluetoothSocket;
         private int retryCount;
-
 
         private ConnectBluetoothTask(int retry) {
             retryCount = retry;
@@ -383,12 +357,12 @@ public class ConnectionService extends Service {
                 new TransferManager(mConnection);
 
                 //Notify connection that it's connected.
-                mConnection.notifyObservers(Connection.Status.Connected);
+                mConnection.notifyConnect();
             } else {
                 System.out.println("Connected failed");
                 if(mBluetoothSocket.isConnected()) {
                     System.out.println("WARNING: ConnectBluetoothTask reported error, but is connected.");
-                    mConnection.notifyObservers(Connection.Status.Connected);
+                    mConnection.notifyConnect();
                 } else {
                     if(retryCount < 3) {
                         retryCount++;
@@ -399,7 +373,7 @@ public class ConnectionService extends Service {
                     } else {
                         retryCount = 0;
                         System.out.println("Error connecting, Aborting!");
-                        mConnection.notifyObservers(Connection.Status.ConnectFailed);
+                        mConnection.notifyConnect();
                     }
                 }
             }
@@ -453,7 +427,7 @@ public class ConnectionService extends Service {
                 }
 
                 //Notify connection of disconnect.
-                mConnection.notifyObservers(Connection.Status.Disconnected);
+                mConnection.notifyDisconnect();
             }
         }
     }
@@ -461,12 +435,13 @@ public class ConnectionService extends Service {
     /**
      * Uses an asynchronous task not on the UI thread to open a TCPIP connection.
      * Usage: new ConnectTcpIpTask(myTcpIpConnection).execute();
+     * FIXME Redo the retry system. Shit's scary
      */
-    private static class ConnectTcpIpTask extends AsyncTask<Connection, Void, Boolean> {
+    private class ConnectTcpIpTask extends AsyncTask<Connection, Void, Boolean> {
 
         private TcpIpConnection mConnection;
         private Socket mSocket;
-        private static int retryCount;
+        private int retryCount;
 
         private ConnectTcpIpTask(int retry) {
             retryCount = retry;
@@ -512,12 +487,12 @@ public class ConnectionService extends Service {
                 new TransferManager(mConnection);
 
                 //Notify connection that it's connected.
-                mConnection.notifyObservers(Connection.Status.Connected);
+                mConnection.notifyConnect();
             } else if(mSocket != null) {
                 System.out.println("Connected failed");
                 if(mSocket.isConnected()) {
                     System.out.println("WARNING: ConnectBluetoothTask reported error, but is connected.");
-                    mConnection.notifyObservers(Connection.Status.Connected);
+                    mConnection.notifyConnect();
                 } else {
                     if(retryCount < 3) {
                         retryCount++;
@@ -527,12 +502,12 @@ public class ConnectionService extends Service {
                     } else {
                         retryCount = 0;
                         System.out.println("Error connecting, Aborting!");
-                        mConnection.notifyObservers(Connection.Status.ConnectFailed);
+                        mConnection.notifyConnect();
                     }
                 }
             } else {
                 System.err.println("Error, TcpIp socket is null");
-                mConnection.notifyObservers(Connection.Status.ConnectFailed);
+                mConnection.notifyConnect();
             }
         }
     }
@@ -584,7 +559,7 @@ public class ConnectionService extends Service {
                 }
 
                 //Notify connection of disconnect.
-                mConnection.notifyObservers(Connection.Status.Disconnected);
+                mConnection.notifyDisconnect();
             }
         }
     }
@@ -712,14 +687,6 @@ public class ConnectionService extends Service {
             mSendThread = new HandlerThread(HANDLER_NAME);
             mSendThread.start();
             mSendHandler = new Handler(mSendThread.getLooper());
-        }
-
-        /**
-         * Returns the Map of Connections and TransferManagers.
-         * @return The Map of Connections and TransferManagers.
-         */
-        public static Map<Connection, TransferManager> getManagers() {
-            return MANAGERS;
         }
 
         /**
@@ -851,7 +818,8 @@ public class ConnectionService extends Service {
                 //Ensure that we're not just sending blank strings; can happen if connection ends.
                 if(line != null && !line.equals("")) {
                     System.out.println(line);
-                    new DataReceiveIntent(mContext, ActivityMain.class, mConnection, line.getBytes()).sendLocal();
+                    //TODO fix broadcast.
+                    //new DataReceiveIntent(SINGLETON, MainActivity.class, mConnection, line.getBytes()).sendLocal();
                 }
 
                 try {

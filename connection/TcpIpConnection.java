@@ -1,11 +1,5 @@
 package com.nicholastmosher.easycom.core.connection;
 
-import android.content.ContentValues;
-import android.provider.BaseColumns;
-
-import com.nicholastmosher.easycom.R;
-import com.nicholastmosher.easycom.core.connection.intents.ConnectionIntent;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -17,22 +11,6 @@ import java.net.Socket;
  * @author Nick Mosher, nicholastmosher@gmail.com, https://github.com/nicholastmosher
  */
 public class TcpIpConnection extends Connection {
-
-    public static abstract class TcpIpConnectionEntry implements BaseColumns {
-        public static final String TABLE_NAME = "tcpip_connections";
-        public static final String COLUMN_CONNECTION_NAME = "connection_name";
-        public static final String COLUMN_CONNECTION_UUID = "connection_uuid";
-        public static final String COLUMN_IP_ADDRESS = "ip_address";
-        public static final String COLUMN_PORT = "port";
-
-        public static final String CREATE_TABLE_INSTRUCTION =
-                "CREATE TABLE " + TABLE_NAME + "(" +
-                        _ID + " INTEGER_PRIMARY_KEY," +
-                        COLUMN_CONNECTION_NAME + " TEXT," +
-                        COLUMN_CONNECTION_UUID + " TEXT," +
-                        COLUMN_IP_ADDRESS + " TEXT," +
-                        COLUMN_PORT + " TEXT)";
-    }
 
     /**
      * The socket connection to the remote.
@@ -94,7 +72,7 @@ public class TcpIpConnection extends Connection {
      * @return The string "connection type" as defined by ConnectionIntent.
      */
     public String getConnectionType() {
-        return ConnectionIntent.CONNECTION_TYPE_TCPIP;
+        return "TCP/IP";
     }
 
     /**
@@ -135,25 +113,6 @@ public class TcpIpConnection extends Connection {
             throw new IllegalStateException("Connection is not active!");
         }
         return null;
-    }
-
-    @Override
-    public int getImageResourceId() {
-        return R.drawable.ic_wifi_black_48dp;
-    }
-
-    /**
-     * Returns the ContentValue representation of this Connection.
-     * @return The ContentValues of this Connection.
-     */
-    @Override
-    public ContentValues getContentValues() {
-        ContentValues values = new ContentValues();
-        values.put(TcpIpConnectionEntry.COLUMN_CONNECTION_NAME, getName());
-        values.put(TcpIpConnectionEntry.COLUMN_CONNECTION_UUID, getUUID());
-        values.put(TcpIpConnectionEntry.COLUMN_IP_ADDRESS, getServerIp());
-        values.put(TcpIpConnectionEntry.COLUMN_PORT, getServerPort());
-        return values;
     }
 
     /**
