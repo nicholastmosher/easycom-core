@@ -2,11 +2,6 @@ package com.nicholastmosher.easycom.core.connection;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothSocket;
-import android.content.ContentValues;
-import android.provider.BaseColumns;
-
-import com.nicholastmosher.easycom.R;
-import com.nicholastmosher.easycom.core.connection.intents.ConnectionIntent;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,22 +15,6 @@ import java.util.UUID;
  * https://github.com/nicholastmosher
  */
 public class BluetoothConnection extends Connection {
-
-    public static abstract class BluetoothConnectionEntry implements BaseColumns {
-        public static final String TABLE_NAME = "bluetooth_connections";
-        public static final String COLUMN_CONNECTION_NAME = "connection_name";
-        public static final String COLUMN_CONNECTION_UUID = "connection_uuid";
-        public static final String COLUMN_BT_DEVICE_NAME = "bt_device_name";
-        public static final String COLUMN_BT_ADDRESS = "bt_address";
-
-        public static final String CREATE_TABLE_INSTRUCTION =
-                "CREATE TABLE " + TABLE_NAME + "(" +
-                        _ID + " INTEGER_PRIMARY_KEY," +
-                        COLUMN_CONNECTION_NAME + " TEXT," +
-                        COLUMN_CONNECTION_UUID + " TEXT," +
-                        COLUMN_BT_DEVICE_NAME + " TEXT," +
-                        COLUMN_BT_ADDRESS + " TEXT)";
-    }
 
     /**
      * UUID used for connecting to Serial boards.
@@ -66,17 +45,7 @@ public class BluetoothConnection extends Connection {
      * @param address The MAC Address of the remote device to connect to.
      */
     public BluetoothConnection(String name, String address) {
-        this(name, address, false);
-    }
-
-    /**
-     * Constructs a BluetoothConnection from a name and bluetooth MAC address.
-     * @param name    The name of this BluetoothConnection.
-     * @param address The MAC Address of the remote device to connect to.
-     * @param temp    True if this should NOT be added to the static map.
-     */
-    public BluetoothConnection(String name, String address, boolean temp) {
-        super(name, temp);
+        super(name);
         if (address == null) {
             throw new NullPointerException("Bluetooth address is null!");
         }
@@ -116,7 +85,7 @@ public class BluetoothConnection extends Connection {
      */
     @Override
     public String getConnectionType() {
-        return ConnectionIntent.CONNECTION_TYPE_BLUETOOTH;
+        return "Bluetooth";
     }
 
     /**
@@ -157,29 +126,6 @@ public class BluetoothConnection extends Connection {
             throw new IllegalStateException("Connection is not active!");
         }
         return null;
-    }
-
-    /**
-     * Returns a resource to the icon to represent this connection.
-     * @return A resource to this connection's icon.
-     */
-    @Override
-    public int getImageResourceId() {
-        return R.drawable.ic_bluetooth_black_48dp;
-    }
-
-    /**
-     * Returns the ContentValue representation of this Connection.
-     * @return The ContentValues of this Connection.
-     */
-    @Override
-    public ContentValues getContentValues() {
-        ContentValues values = new ContentValues();
-        values.put(BluetoothConnectionEntry.COLUMN_CONNECTION_NAME, getName());
-        values.put(BluetoothConnectionEntry.COLUMN_CONNECTION_UUID, getUUID());
-        values.put(BluetoothConnectionEntry.COLUMN_BT_DEVICE_NAME, getDeviceName());
-        values.put(BluetoothConnectionEntry.COLUMN_BT_ADDRESS, getAddress());
-        return values;
     }
 
     /**

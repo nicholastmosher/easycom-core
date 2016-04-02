@@ -1,22 +1,14 @@
 package com.nicholastmosher.easycom.core.connection;
 
-import android.content.ContentValues;
-import android.content.Context;
-
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 
-import com.nicholastmosher.easycom.core.connection.intents.ConnectIntent;
-import com.nicholastmosher.easycom.core.connection.intents.DataSendIntent;
-import com.nicholastmosher.easycom.core.connection.intents.DisconnectIntent;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Observable;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -25,7 +17,11 @@ import java.util.UUID;
  * nicholastmosher@gmail.com
  * https://github.com/nicholastmosher
  */
-public abstract class Connection extends Observable {
+public abstract class Connection {
+
+    public static final String TYPE_BLUETOOTH = "connection_type_bluetooth";
+    public static final String TYPE_TCPIP = "connection_type_tcpip";
+    public static final String TYPE_USB = "connection_type_usb";
 
     public enum Status {
         Connected,
@@ -44,13 +40,6 @@ public abstract class Connection extends Observable {
             new ConnectionTypeAdapter();
 
     /**
-     * Static map stores all constructed connections.  This way we
-     * can reference them from different activities without needing
-     * to pass through the Parcelable framework.
-     */
-    protected static Map<UUID, Connection> connections = new HashMap<>();
-
-    /**
      * The name of this Connection.
      */
     protected String mName;
@@ -66,24 +55,12 @@ public abstract class Connection extends Observable {
      */
     protected Status mStatus = Status.Disconnected;
 
-    protected Context mContext;
-
-    /**
-     * Constructs a Connection that will be added to the static map.
-     * @param name The name of this Connection.
-     */
-    public Connection(String name) {
-        this(name, false);
-    }
-
     /**
      * Constructs a Connection using a given name.  Addresses or
      * connection information are managed by subclasses.
      * @param name The name of the Connection.
-     * @param temp True if this Connection should NOT be added to the static
-     *             map.
      */
-    public Connection(String name, boolean temp) {
+    public Connection(String name) {
         if (name == null) {
             System.out.println("Connection has no name!");
             mName = "";
@@ -91,11 +68,6 @@ public abstract class Connection extends Observable {
             mName = name;
         }
         mUUID = UUID.randomUUID();
-
-        //If this connection is not marked as temporary, add it to the map.
-        if(!temp) {
-            connections.put(mUUID, this);
-        }
     }
 
     /**
@@ -105,7 +77,7 @@ public abstract class Connection extends Observable {
     public void setName(String name) {
         if (name != null) {
             mName = name;
-            notifyObservers(Status.MetadataChanged);
+            notifyMetadataChanged();
         } else {
             new NullPointerException("Name is nulL!").printStackTrace();
         }
@@ -128,35 +100,13 @@ public abstract class Connection extends Observable {
     }
 
     /**
-     * Returns an existing connection being held in the static map.
-     * @param uuid The UUID of the connection.
-     * @return The Connection, or null if there is no key for the UUID.
-     */
-    public static Connection getConnection(UUID uuid) {
-        return connections.get(uuid);
-    }
-
-    /**
-     * Returns an existing connection being held in the static map.
-     * @param uuid The UUID of the connection.
-     * @return The Connection, or null if there is no kwy for the UUID.
-     */
-    public static Connection getConnection(String uuid) {
-        return getConnection(UUID.fromString(uuid));
-    }
-
-    /**
      * Send connect request to ConnectionService to open a Connection
      * using this object's data.
-     * @param context The context to send the intent to launch the Service.
      */
-    public void connect(Context context) {
+    public void connect() {
         if (!(getStatus().equals(Status.Connected))) {
 
-            mContext = context;
-
-            //Send intent with this connection's data over LocalBroadcastManager
-            new ConnectIntent(mContext, this).sendLocal();
+            ConnectionService.getInstance().connect(this);
 
             //Indicate that this connection's status is now "connecting".
             mStatus = Status.Connecting;
@@ -166,27 +116,20 @@ public abstract class Connection extends Observable {
     /**
      * Send disconnect request to ConnectionService to close a Connection
      * using this object's data.
-     * @param context The context to send the intent to launch the Service.
      */
-    public void disconnect(Context context) {
+    public void disconnect() {
         if (getStatus().equals(Status.Connected)) {
-
-            mContext = context;
-
-            //Send intent with this connection's data over LocalBroadcastManager
-            new DisconnectIntent(context, this).sendLocal();
+            ConnectionService.getInstance().disconnect(this);
         }
     }
 
     /**
      * Sends an intent to ConnectionService with data that should be sent over
      * this connection.
-     * @param context The context to send the intent from.
      * @param data    The data to send.
      */
-    public void send(Context context, byte[] data) {
-        mContext = context;
-        new DataSendIntent(mContext, this, data).sendLocal();
+    public void send(byte[] data) {
+        ConnectionService.getInstance().send(this, data);
     }
 
     /**
@@ -224,18 +167,6 @@ public abstract class Connection extends Observable {
     public abstract OutputStream getOutputStream() throws IllegalStateException;
 
     /**
-     * Returns the resource Id for the icon of this Connection.
-     * @return The resource Id for the icon of this Connection.
-     */
-    public abstract int getImageResourceId();
-
-    /**
-     * Returns the ContentValue representation of this Connection.
-     * @return The ContentValues of this Connection.
-     */
-    public abstract ContentValues getContentValues();
-
-    /**
      * Hashing a connection object will tell if the two objects contain
      * the exact content data, but the same connection - if any
      * member values are changed - will hash differently.  This method
@@ -243,10 +174,78 @@ public abstract class Connection extends Observable {
      * the same connection regardless of the status of the member data.
      * This is determined by comparing the UUIDs of each connection.
      * @param c The connection to compare to this object.
-     * @return True if connections are the same, False otherwise.
+     * @return True if connections are the same, false otherwise.
      */
     public boolean isVersionOf(Connection c) {
         return c.getUUID().equals(this.getUUID());
+    }
+
+    /*
+     * A listener setup for notifying listening parties about a change in this
+     * Connection's metadata (such as name or address change).
+     */
+    public interface OnMetadataChangedListener {
+        void onMetadataChanged(Connection connection);
+    }
+    private Set<OnMetadataChangedListener> mOnMetadataChangedListeners = new HashSet<>();
+    public void addOnMetadataChangedListener(OnMetadataChangedListener listener) {
+        mOnMetadataChangedListeners.add(listener);
+    }
+    private void notifyMetadataChanged() {
+        for(OnMetadataChangedListener listener : mOnMetadataChangedListeners) {
+            listener.onMetadataChanged(this);
+        }
+    }
+
+    /*
+     * A listener setup for notifying listening parties about a successfully
+     * established connection.
+     */
+    public interface OnConnectListener {
+        void onConnect(Connection connection);
+    }
+    private Set<OnConnectListener> mOnConnectListeners = new HashSet<>();
+    public void addOnConnectListener(OnConnectListener listener) {
+        mOnConnectListeners.add(listener);
+    }
+    public void notifyConnect() {
+        for(OnConnectListener listener : mOnConnectListeners) {
+            listener.onConnect(this);
+        }
+    }
+
+    /*
+     * A listener setup for notifying listening parties about a successfully
+     * established connection.
+     */
+    public interface OnDisconnectListener {
+        void onDisconnect(Connection connection);
+    }
+    private Set<OnDisconnectListener> mOnDisconnectListeners = new HashSet<>();
+    public void addOnDisconnectListener(OnDisconnectListener listener) {
+        mOnDisconnectListeners.add(listener);
+    }
+    public void notifyDisconnect() {
+        for(OnDisconnectListener listener : mOnDisconnectListeners) {
+            listener.onDisconnect(this);
+        }
+    }
+
+    /*
+     * A listener setup for notifying listening parties that some data has been
+     * received over this connection.
+     */
+    public interface OnDataReceivedListener {
+        void onDataReceived(Connection connection, byte[] data);
+    }
+    private Set<OnDataReceivedListener> mOnDataReceivedListeners = new HashSet<>();
+    public void addOnDataReceivedListener(OnDataReceivedListener listener) {
+        mOnDataReceivedListeners.add(listener);
+    }
+    public void notifyDataReceived(byte[] data) {
+        for(OnDataReceivedListener listener : mOnDataReceivedListeners) {
+            listener.onDataReceived(this, data);
+        }
     }
 
     /**
