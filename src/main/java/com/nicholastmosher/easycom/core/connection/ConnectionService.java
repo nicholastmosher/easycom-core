@@ -325,6 +325,7 @@ public class ConnectionService extends Service {
             try {
                 mBluetoothSocket.connect();
                 mConnection.setBluetoothSocket(mBluetoothSocket);
+                mConnection.notifyConnect();
                 System.out.println("BluetoothSocket connected, success!");
             } catch(IOException e) {
                 e.printStackTrace();
@@ -816,8 +817,8 @@ public class ConnectionService extends Service {
                 //Ensure that we're not just sending blank strings; can happen if connection ends.
                 if(line != null && !line.equals("")) {
                     System.out.println(line);
-                    //FIXME Instead of hardcoding MainActivity.class, add class "listeners"
-                    //new DataReceiveIntent(SINGLETON, MainActivity.class, mConnection, line.getBytes()).sendLocal();
+                    //Notify all listeners subscribed to this connection.
+                    mConnection.notifyDataReceived(line.getBytes());
                 }
 
                 try {

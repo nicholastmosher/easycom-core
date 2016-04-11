@@ -85,7 +85,7 @@ public class BluetoothConnection extends Connection {
      */
     @Override
     public String getConnectionType() {
-        return "Bluetooth";
+        return TYPE_BLUETOOTH;
     }
 
     /**

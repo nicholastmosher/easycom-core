@@ -1,6 +1,5 @@
 package com.nicholastmosher.easycom.core.connection;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.HashSet;
@@ -15,6 +14,7 @@ import java.util.UUID;
  */
 public abstract class Connection {
 
+    public static final String EXTRA_UUID = "connection_uuid_extra";
     public static final String TYPE_BLUETOOTH = "connection_type_bluetooth";
     public static final String TYPE_TCPIP = "connection_type_tcpip";
     public static final String TYPE_USB = "connection_type_usb";
@@ -198,6 +198,7 @@ public abstract class Connection {
         mOnConnectListeners.add(listener);
     }
     public void notifyConnect() {
+        mStatus = Status.Connected;
         for(OnConnectListener listener : mOnConnectListeners) {
             listener.onConnect(this);
         }
@@ -215,6 +216,7 @@ public abstract class Connection {
         mOnDisconnectListeners.add(listener);
     }
     public void notifyDisconnect() {
+        mStatus = Status.Disconnected;
         for(OnDisconnectListener listener : mOnDisconnectListeners) {
             listener.onDisconnect(this);
         }

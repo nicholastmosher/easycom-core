@@ -72,7 +72,7 @@ public class TcpIpConnection extends Connection {
      * @return The string "connection type" as defined by ConnectionIntent.
      */
     public String getConnectionType() {
-        return "TCP/IP";
+        return TYPE_TCPIP;
     }
 
     /**
