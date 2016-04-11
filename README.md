@@ -118,7 +118,7 @@ updates such as successful connection, disconnection, etc.
 ### OnMetadataChangedListener
 
 An `OnMetadataChangedListener` will trigger whenever a metadata change such as renaming
-the connection or re-assigning an address.
+the connection or re-assigning an address occurs.
 
 	myConnection.addOnMetadataChangedListener(new Connection.OnMetadataChangedListener() {
 		@Override
