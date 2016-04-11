@@ -2,7 +2,6 @@ package com.nicholastmosher.easycom.core.connection;
 
 import android.hardware.usb.UsbDevice;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
@@ -17,40 +16,53 @@ public class UsbHostConnection extends Connection {
     public UsbHostConnection(UsbDevice device) {
         super(device.getDeviceName());
         mUsbDevice = device;
+
+        //FIXME Add implementation for USB Host connections. Until then throw unsupported.
+        throw new UnsupportedOperationException("USB Host Connections are not yet supported.");
     }
 
     @Override
     public Status getStatus() {
-        return mStatus;
+        //FIXME Add implementation for USB Host connections. Until then throw unsupported.
+        throw new UnsupportedOperationException("USB Host Connections are not yet supported.");
+//        return mStatus;
     }
 
     @Override
     public String getConnectionType() {
-        return "USB Host";
+        //FIXME Add implementation for USB Host connections. Until then throw unsupported.
+        throw new UnsupportedOperationException("USB Host Connections are not yet supported.");
+//        return TYPE_USB;
     }
 
     @Override
     public InputStream getInputStream() throws IllegalStateException {
-        return new InputStream() {
-            @Override
-            public int read() throws IOException {
-                return 0;
-            }
-        };
+        //FIXME Add implementation for USB Host connections. Until then throw unsupported.
+        throw new UnsupportedOperationException("USB Host Connections are not yet supported.");
+//        return new InputStream() {
+//            @Override
+//            public int read() throws IOException {
+//                return 0;
+//            }
+//        };
     }
 
     @Override
     public OutputStream getOutputStream() throws IllegalStateException {
-        return new OutputStream() {
-            @Override
-            public void write(int oneByte) throws IOException {
-                byte[] toSend = new byte[]{(byte) oneByte};
-
-            }
-        };
+        //FIXME Add implementation for USB Host connections. Until then throw unsupported.
+        throw new UnsupportedOperationException("USB Host Connections are not yet supported.");
+//        return new OutputStream() {
+//            @Override
+//            public void write(int oneByte) throws IOException {
+//                byte[] toSend = new byte[]{(byte) oneByte};
+//
+//            }
+//        };
     }
 
     public UsbDevice getUsbDevice() {
-        return mUsbDevice;
+        //FIXME Add implementation for USB Host connections. Until then throw unsupported.
+        throw new UnsupportedOperationException("USB Host Connections are not yet supported.");
+//        return mUsbDevice;
     }
 }
