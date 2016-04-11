@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -806,38 +807,34 @@ public class ConnectionService extends Service {
          */
         @Override
         protected Void doInBackground(Void... params) {
-            System.out.println("RUNNING RECEIVE THREAD");
-            String line = "";
-            BufferedReader bufferedReader = null;
+            Log.v(TAG, "Begin receive task for connection " + mConnection.getName() + ".");
+            InputStream input = null;
             while((mConnection.getStatus().equals(Connection.Status.Connected)) && isRunning) {
+
                 try {
-                    if(bufferedReader == null) {
-                        InputStream inputStream = mConnection.getInputStream();
-                        if(inputStream == null) {
-                            throw new NullPointerException("Input Stream is null!");
+                    if(input == null) {
+                        input= mConnection.getInputStream();
+                        if(input == null) {
+                            throw new NullPointerException("InputStream is null.");
                         }
-                        bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
                     }
-                    //Fun fact, if the input stream disconnects, readLine() decides to return null :/
-                    //TODO do not depend on reading newlines.
-                    line = bufferedReader.readLine();
+
+                    while(input.available() > 0) {
+                        int in = input.read();
+                        if(in == -1) {
+                            throw new IOException("Input stream returned -1.");
+                        }
+                        publishProgress(new byte[]{(byte) in});
+                    }
 
                 } catch(IOException e) {
                     //Happens if the bufferedReader's stream is closed.
                     e.printStackTrace();
                 }
 
-                //Ensure that we're not just sending blank strings; can happen if connection ends.
-                if(line != null && !line.equals("")) {
-                    System.out.println(line);
-                    //Notify all listeners subscribed to this connection through the UI thread.
-                    publishProgress(line.getBytes());
-                }
-
                 try {
                     Thread.sleep(50);
                 } catch(InterruptedException e) {
-                    System.out.println("RECEIVE THREAD INTERRUPTED");
                     e.printStackTrace();
                     isRunning = false;
                 }
