@@ -647,7 +647,7 @@ public class ConnectionService extends Service {
 
         private static final Map<Connection, TransferManager> MANAGERS = new HashMap<>();
 
-        private ReceiveThread mReceiver;
+        private ReceiveTask mReceiver;
         private HandlerThread mSendThread;
         private Handler mSendHandler;
 
@@ -666,7 +666,7 @@ public class ConnectionService extends Service {
          * @param connection The connection to manage.
          * @param receiver   The existing receiver to use.
          */
-        public TransferManager(Connection connection, ReceiveThread receiver) {
+        public TransferManager(Connection connection, ReceiveTask receiver) {
             if(connection == null) {
                 throw new NullPointerException("Connection is null!");
             }
@@ -676,7 +676,7 @@ public class ConnectionService extends Service {
 
             //Initialize receiver safely.
             if(receiver == null) {
-                mReceiver = new ReceiveThread(connection);
+                mReceiver = new ReceiveTask(connection);
             } else {
                 mReceiver = receiver;
             }
@@ -702,7 +702,7 @@ public class ConnectionService extends Service {
          * listening for incoming data.
          */
         public void openReceiver() {
-            mReceiver.start();
+            mReceiver.execute();
         }
 
         /**
@@ -724,7 +724,7 @@ public class ConnectionService extends Service {
          * SendThreads.
          */
         public void close() {
-            mReceiver.interrupt();
+            mReceiver.cancel(true);
             mSendThread.interrupt();
         }
     }
@@ -772,9 +772,17 @@ public class ConnectionService extends Service {
     }
 
     /**
-     * Opens a background thread that continuously monitors for input on a connection.
+     * A ReceiveTask is spawned when a new Connection is successfully established.
+     * This task is responsible for monitoring incoming data over the given
+     * connection and notifying that connection's listeners when data is received.
+     * This functionality is implemented using an AsyncTask rather than a Thread
+     * for a specific reason. When we receive data and it's time to notify all of
+     * the listeners, those listeners may want to make UI updates. However, all
+     * threads other than the main UI thread are forbidden to touch UI objects, so
+     * the AsyncTask passes received values to methods in the UI thread which then
+     * calls all of the listeners.
      */
-    private static class ReceiveThread extends Thread {
+    private static class ReceiveTask extends AsyncTask<Void, byte[], Void> {
 
         private Connection mConnection;
         private boolean isRunning;
@@ -783,7 +791,7 @@ public class ConnectionService extends Service {
          * Create a new ReceiveThread that watches the given connection.
          * @param connection The connection to receive data from.
          */
-        public ReceiveThread(Connection connection) {
+        public ReceiveTask(Connection connection) {
             if(connection == null) {
                 throw new NullPointerException("Connection is null!");
             }
@@ -791,9 +799,13 @@ public class ConnectionService extends Service {
             isRunning = true;
         }
 
+        /**
+         * Wait for data to be received from the given connection.
+         * @param params Filler for AsyncTask generic requirement.
+         * @return No value. Filler for AsyncTask generic requirement.
+         */
         @Override
-        public void run() {
-            super.run();
+        protected Void doInBackground(Void... params) {
             System.out.println("RUNNING RECEIVE THREAD");
             String line = "";
             BufferedReader bufferedReader = null;
@@ -807,6 +819,7 @@ public class ConnectionService extends Service {
                         bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
                     }
                     //Fun fact, if the input stream disconnects, readLine() decides to return null :/
+                    //TODO do not depend on reading newlines.
                     line = bufferedReader.readLine();
 
                 } catch(IOException e) {
@@ -817,8 +830,8 @@ public class ConnectionService extends Service {
                 //Ensure that we're not just sending blank strings; can happen if connection ends.
                 if(line != null && !line.equals("")) {
                     System.out.println(line);
-                    //Notify all listeners subscribed to this connection.
-                    mConnection.notifyDataReceived(line.getBytes());
+                    //Notify all listeners subscribed to this connection through the UI thread.
+                    publishProgress(line.getBytes());
                 }
 
                 try {
@@ -829,6 +842,18 @@ public class ConnectionService extends Service {
                     isRunning = false;
                 }
             }
+            return null;
+        }
+
+        /**
+         * When we receive data, we must notify the listeners from a scope
+         * within the UI thread.
+         * @param values The data received from this connection.
+         */
+        @Override
+        protected void onProgressUpdate(byte[]... values) {
+            super.onProgressUpdate(values);
+            mConnection.notifyDataReceived(values[0]);
         }
     }
 }
