@@ -163,3 +163,11 @@ over a connection.
 			System.out.println("Received data: " + new String(data));
 		}
 	}
+
+# Disclaimer
+
+Though I would love for people to download and use this library, I cannot be
+held responsible for any damages that may result from the use of it. I do
+however welcome any feedback or contributions that may help to make it a more
+stable and useful piece of software to be used by others. This library is
+licensed under GPL 3.0.
