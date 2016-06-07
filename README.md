@@ -11,15 +11,17 @@ be switched out without changing application behavior.
 To use easycom core in your app, add the following to the `build.gradle` file
 in your app's module.
 
-	repositories {
-		maven {
-			url 'https://dl.bintray.com/nicholastmosher/maven'
-		}
+```Gradle
+repositories {
+	maven {
+		url 'https://dl.bintray.com/nicholastmosher/maven'
 	}
+}
 
-	dependencies {
-		compile 'com.nicholastmosher.easycom.core:easycom-core:0.0.1'
-	}
+dependencies {
+	compile 'com.nicholastmosher.easycom.core:easycom-core:0.0.1'
+}
+```
 
 If you already see `repositories` and/or `maven`, just add the url inside those
 blocks, same for `dependencies`.
@@ -48,7 +50,9 @@ be launched before any attempt to initiate or transfer over connections. To
 launch the `ConnectionService`, place the following code into your main Activity's
 `onCreate` moethod:
 
-	ConnectionService.launch(getApplicationContext());
+```Java
+ConnectionService.launch(getApplicationContext());
+```
 
 ### Constructing Connections
 
@@ -56,7 +60,9 @@ launch the `ConnectionService`, place the following code into your main Activity
 
 To construct a `BluetoothConnection`, do the following:
 
-	Connection myConnection = new BluetoothConnection("Device Name", "XX:XX:XX:XX:XX:XX");
+```Java
+Connection myConnection = new BluetoothConnection("Device Name", "XX:XX:XX:XX:XX:XX");
+```
 
 Where `XX:XX:XX:XX:XX:XX` is the MAC address of the bluetooth device you want
 to connect to. Note that this library does not take care of discovering
@@ -66,7 +72,9 @@ bluetooth devices, currently you must do that yourself.
 
 To construct a `TcpIpConnection`, do the following:
 
-	Connection myConnection = new TcpIpConnection("Device Name", "device.address", XXXXX);
+```Java
+Connection myConnection = new TcpIpConnection("Device Name", "device.address", XXXXX);
+```
 
 Where `device.address` is the hostname or ip address of the remote device, and
 `XXXXX` is the port.
@@ -79,13 +87,17 @@ but allows for easy organization or labeling for displaying them in the UI.
 The Connection object only represents how to connect to a device, but constructing it
 doesn't launch the connection. To initiate a connection, do the following:
 
-	myConnection.connect();
+```Java
+myConnection.connect();
+```
 
 ### Sending Data
 
 Once a connection is established, we can send data in byte array format using the following:
 
-	myConnection.send("Hello, World!".getBytes());
+```Java
+myConnection.send("Hello, World!".getBytes());
+```
 
 ### Receiving Data
 
@@ -95,18 +107,22 @@ thread that waits until it receives data, then notifies "listeners" that have re
 with the connection. To get notified about incoming data, register a listener with the
 connection:
 
-	myConnection.addOnDataReceivedListener(new Connection.OnDataReceivedListener() {
-		@Override
-		public void onDataReceived(Connection connection, byte[] data) {
-			System.out.println("I just received this data: " + new String(data));
-		}
-	});
+```Java
+myConnection.addOnDataReceivedListener(new Connection.OnDataReceivedListener() {
+	@Override
+	public void onDataReceived(Connection connection, byte[] data) {
+		System.out.println("I just received this data: " + new String(data));
+	}
+});
+```
 
 ### Disconnecting
 
 To disconnect a connection, just execute the following:
 
-	myConnection.disconnect();
+```Java
+myConnection.disconnect();
+```
 
 ## Additional Listeners
 
@@ -120,49 +136,57 @@ updates such as successful connection, disconnection, etc.
 An `OnMetadataChangedListener` will trigger whenever a metadata change such as renaming
 the connection or re-assigning an address occurs.
 
-	myConnection.addOnMetadataChangedListener(new Connection.OnMetadataChangedListener() {
-		@Override
-		public void onMetadataChanged(Connection connection) {
-			//Triggers when any metadata of the connection changes.
-		}
-	})
+```Java
+myConnection.addOnMetadataChangedListener(new Connection.OnMetadataChangedListener() {
+	@Override
+	public void onMetadataChanged(Connection connection) {
+		//Triggers when any metadata of the connection changes.
+	}
+})
+```
 
 ### OnConnectListener
 
 An `OnConnectListener` will trigger whenever this connection successfully completes
 connecting to its target.
 
-	myConnection.addOnConnectListener(new Connection.OnConnectListener() {
-		@Override
-		public void onConnect(Connection connection) {
-			//Triggers when this connection finishes connecting to target.
-		}
-	})
+```Java
+myConnection.addOnConnectListener(new Connection.OnConnectListener() {
+	@Override
+	public void onConnect(Connection connection) {
+		//Triggers when this connection finishes connecting to target.
+	}
+})
+```
 
 ### OnDisconnectListener
 
 An `OnDisconnectListener` will trigger when this connection disconnects, either from
 losing communitation with the target device or from a user-initiated disconnect.
 
-	myConnection.addOnDisconnectListener(new Connection.OnDisconnectListener() {
-		@Override
-		public void onDisconnect(Connection connection) {
-			//Triggers when this connection disconnects from its target.
-		}
-	})
+```Java
+myConnection.addOnDisconnectListener(new Connection.OnDisconnectListener() {
+	@Override
+	public void onDisconnect(Connection connection) {
+		//Triggers when this connection disconnects from its target.
+	}
+})
+```
 
 ### OnDataReceivedListener
 
 As seen before, an `OnDataReceivedListener` will trigger whenever incoming data arrives
 over a connection.
 
-	myConnection.addOnDataReceivedListener(new Connection.OnDataReceivedListener() {
-		@Override
-		public void onDataReceived(Connection connection, byte[] data) {
-			//Triggers when data arrives over connection.
-			System.out.println("Received data: " + new String(data));
-		}
+```Java
+myConnection.addOnDataReceivedListener(new Connection.OnDataReceivedListener() {
+	@Override
+	public void onDataReceived(Connection connection, byte[] data) {
+		//Triggers when data arrives over connection.
+		System.out.println("Received data: " + new String(data));
 	}
+}
+```
 
 # Disclaimer
 
